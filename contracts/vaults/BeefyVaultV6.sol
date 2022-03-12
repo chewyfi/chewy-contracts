@@ -1,25 +1,21 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity ^0.6.0;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-// Interfaces
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IStrategy } from "../interfaces/beefy/IStrategy.sol";
-import { IWrappedNative } from "../interfaces/common/IWrappedNative.sol";
+import "../interfaces/beefy/IStrategy.sol";
 
 /**
  * @dev Implementation of a vault to deposit funds for yield optimizing.
  * This is the contract that receives funds and that users interface with.
  * The yield optimizing strategy itself is implemented in a separate 'Strategy.sol' contract.
  */
-contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
-    using SafeERC20 for IWrappedNative;
+contract BeefyVaultV6 is ERC20, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -32,8 +28,6 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
     StratCandidate public stratCandidate;
     // The strategy currently in use by the vault.
     IStrategy public strategy;
-    // BEP20 token version of BNB.
-    IWrappedNative public native;
     // The minimum time it has to pass before a strat candidate can be approved.
     uint256 public immutable approvalDelay;
 
@@ -41,7 +35,8 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
     event UpgradeStrat(address implementation);
 
     /**
-     * @dev It initializes the vault's own 'moo' token.
+     * @dev Sets the value of {token} to the token that the vault will
+     * hold as underlying value. It initializes the vault's own 'moo' token.
      * This token is minted when someone does a deposit. It is burned in order
      * to withdraw the corresponding portion of the underlying assets.
      * @param _strategy the address of the strategy.
@@ -50,7 +45,6 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * @param _approvalDelay the delay before a new strat can be approved.
      */
     constructor (
-        address _native,
         IStrategy _strategy,
         string memory _name,
         string memory _symbol,
@@ -59,9 +53,12 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
         _name,
         _symbol
     ) {
-        native = IWrappedNative(_native);
         strategy = _strategy;
         approvalDelay = _approvalDelay;
+    }
+
+    function want() public view returns (IERC20) {
+        return IERC20(strategy.want());
     }
 
     /**
@@ -70,7 +67,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      *  and the balance deployed in other contracts as part of the strategy.
      */
     function balance() public view returns (uint) {
-        return available().add(IStrategy(strategy).balanceOf());
+        return want().balanceOf(address(this)).add(IStrategy(strategy).balanceOf());
     }
 
     /**
@@ -80,7 +77,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * of putting them to work.
      */
     function available() public view returns (uint256) {
-        return native.balanceOf(address(this));
+        return want().balanceOf(address(this));
     }
 
     /**
@@ -95,7 +92,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * @dev A helper function to call deposit() with all the sender's funds.
      */
     function depositAll() external {
-        deposit(native.balanceOf(msg.sender));
+        deposit(want().balanceOf(msg.sender));
     }
 
     /**
@@ -106,29 +103,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
         strategy.beforeDeposit();
 
         uint256 _pool = balance();
-        native.safeTransferFrom(msg.sender, address(this), _amount);
-        earn();
-        uint256 _after = balance();
-        _amount = _after.sub(_pool); // Additional check for deflationary tokens
-        uint256 shares = 0;
-        if (totalSupply() == 0) {
-            shares = _amount;
-        } else {
-            shares = (_amount.mul(totalSupply())).div(_pool);
-        }
-        _mint(msg.sender, shares);
-    }
-
-    /**
-     * @dev Alternative entry point into the strat. You can send native MATIC,
-     * and the vault will wrap them before sending them into the strat.
-     */
-    function depositBNB() public payable {
-        strategy.beforeDeposit();
-
-        uint256 _pool = balance();
-        uint256 _amount = msg.value;
-        native.deposit{value: _amount}();
+        want().safeTransferFrom(msg.sender, address(this), _amount);
         earn();
         uint256 _after = balance();
         _amount = _after.sub(_pool); // Additional check for deflationary tokens
@@ -147,7 +122,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      */
     function earn() public {
         uint _bal = available();
-        native.safeTransfer(address(strategy), _bal);
+        want().safeTransfer(address(strategy), _bal);
         strategy.deposit();
     }
 
@@ -159,13 +134,6 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Alternative helper function to withdraw all funds in native matic form.
-     */
-    function withdrawAllBNB() external {
-        withdrawBNB(balanceOf(msg.sender));
-    }
-
-    /**
      * @dev Function to exit the system. The vault will withdraw the required tokens
      * from the strategy and pay up the token holder. A proportional number of IOU
      * tokens are burned in the process.
@@ -174,41 +142,18 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
         uint256 r = (balance().mul(_shares)).div(totalSupply());
         _burn(msg.sender, _shares);
 
-        uint b = native.balanceOf(address(this));
+        uint b = want().balanceOf(address(this));
         if (b < r) {
             uint _withdraw = r.sub(b);
             strategy.withdraw(_withdraw);
-            uint _after = native.balanceOf(address(this));
+            uint _after = want().balanceOf(address(this));
             uint _diff = _after.sub(b);
             if (_diff < _withdraw) {
                 r = b.add(_diff);
             }
         }
 
-        native.safeTransfer(msg.sender, r);
-    }
-
-    /**
-     * @dev Alternative function to exit the system. Works just like 'withdraw(uint256)',
-     * but the funds arrive in native matic.
-     */
-    function withdrawBNB(uint256 _shares) public {
-        uint256 r = (balance().mul(_shares)).div(totalSupply());
-        _burn(msg.sender, _shares);
-
-        uint b = native.balanceOf(address(this));
-        if (b < r) {
-            uint _withdraw = r.sub(b);
-            strategy.withdraw(_withdraw);
-            uint _after = native.balanceOf(address(this));
-            uint _diff = _after.sub(b);
-            if (_diff < _withdraw) {
-                r = b.add(_diff);
-            }
-        }
-
-        native.withdraw(r);
-        payable(msg.sender).transfer(r);
+        want().safeTransfer(msg.sender, r);
     }
 
     /** 
@@ -250,11 +195,9 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * @param _token address of the token to rescue.
      */
     function inCaseTokensGetStuck(address _token) external onlyOwner {
-        require(_token != address(native), "!token");
+        require(_token != address(want()), "!token");
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
-
-    receive () external payable {}
 }

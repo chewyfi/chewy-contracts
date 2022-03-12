@@ -6,7 +6,7 @@ describe("BeefyTreasury", () => {
   const setup = async () => {
     const [signer, other] = await ethers.getSigners();
 
-    const Token = await ethers.getContractFactory("TestToken");
+    const Token = await ethers.getContractFactory("MockERC20");
     const token = await Token.deploy("10000", "Test Token", "TEST");
 
     const Treasury = await ethers.getContractFactory("BeefyTreasury");
@@ -15,7 +15,7 @@ describe("BeefyTreasury", () => {
     return { signer, other, token, treasury };
   };
 
-  it("receives BNB correctly", async () => {
+  it("receives Native correctly", async () => {
     const { signer, treasury } = await setup();
     const value = 10000000000;
 
@@ -27,7 +27,7 @@ describe("BeefyTreasury", () => {
     expect(balanceAfter).to.equal(value);
   });
 
-  it("owner can send BNB correctly", async () => {
+  it("owner can send Native correctly", async () => {
     const { signer, other, treasury } = await setup();
     const value = 10000000000;
     await signer.sendTransaction({ to: treasury.address, value });
@@ -39,7 +39,7 @@ describe("BeefyTreasury", () => {
     expect(balanceAfter).to.equal(balanceBefore.add(value));
   });
 
-  it("other account can't send BNB", async () => {
+  it("other account can't send Native", async () => {
     const { other, treasury } = await setup();
 
     const tx = treasury.connect(other).withdrawNative(other.address, 0);

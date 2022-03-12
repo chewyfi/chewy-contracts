@@ -7,7 +7,6 @@ import "./StratManager.sol";
 
 abstract contract FeeManager is StratManager {
     uint constant public MAX_STRATEGIST_FEE = 112;
-    uint public STRATEGIST_FEE = 0;
     uint constant public MAX_FEE = 1000;
     uint constant public MAX_CALL_FEE = 111;
 
@@ -15,15 +14,15 @@ abstract contract FeeManager is StratManager {
     uint constant public WITHDRAWAL_MAX = 10000;
 
     uint public withdrawalFee = 10;
-
+    uint public strategistFee = 0;
     uint public callFee = 100;
-    uint public beefyFee = MAX_FEE - STRATEGIST_FEE - callFee;
+    uint public beefyFee = MAX_FEE - strategistFee - callFee;
 
     function setCallFee(uint256 _fee) public onlyManager {
         require(_fee <= MAX_CALL_FEE, "!cap");
         
         callFee = _fee;
-        beefyFee = MAX_FEE - STRATEGIST_FEE - callFee;
+        beefyFee = MAX_FEE - strategistFee - callFee;
     }
 
     function setWithdrawalFee(uint256 _fee) public onlyManager {
@@ -33,9 +32,9 @@ abstract contract FeeManager is StratManager {
     }
 
     function setStrategyFee(uint256 _fee) public onlyManager {
-        require(_fee <= MAX_STRATEGY_FEE, "!cap");
+        require(_fee <= MAX_STRATEGIST_FEE, "!cap");
         
-        STRATEGIST_FEE = _fee;
-        beefyFee = MAX_FEE - STRATEGIST_FEE - callFee;
+        strategistFee = _fee;
+        beefyFee = MAX_FEE - strategistFee - callFee;
     }
 }
