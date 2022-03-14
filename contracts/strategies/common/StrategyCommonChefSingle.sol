@@ -33,7 +33,6 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
     // Routes
     address[] public outputToNativeRoute;
-    address[] public outputToWantRoute;
 
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
@@ -48,8 +47,7 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
         address _keeper,
         address _strategist,
         address _beefyFeeRecipient,
-        address[] memory _outputToNativeRoute,
-        address[] memory _outputToWantRoute
+        address[] memory _outputToNativeRoute
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
         poolId = _poolId;
@@ -58,10 +56,6 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
         outputToNativeRoute = _outputToNativeRoute;
-
-        require(_outputToWantRoute[0] == output, "outputToWantRoute[0] != output");
-        require(_outputToWantRoute[_outputToWantRoute.length - 1] == want, "!want");
-        outputToWantRoute = _outputToWantRoute;
 
         _giveAllowances();
     }
@@ -153,9 +147,9 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
     // swap rewards to {want}
     function swapRewards() internal {
-        if (want != output) {
+        if (native != output) {
             uint256 outputBal = IERC20(output).balanceOf(address(this));
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputBal, 0, outputToWantRoute, address(this), now);
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputBal, 0, outputToNativeRoute, address(this), now);
         }
     }
 
@@ -265,9 +259,5 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
     function outputToNative() external view returns (address[] memory) {
         return outputToNativeRoute;
-    }
-
-    function outputToWant() external view returns (address[] memory) {
-        return outputToWantRoute;
     }
 }

@@ -37,14 +37,12 @@ const strategyParams = {
   keeper: KEEPER,
   beefyFeeRecipient: TREASURY,
   outputToNativeRoute: [SOLAR, wMOVR],
-  outputToLp0Route: [SOLAR, DAI],
-  outputToLp1Route: [SOLAR, USDC],
  // pendingRewardsFunctionName: "pendingTri", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategySolarbeamV2",
+  strategy: "StrategyCommonChefSingle",
 };
 
 const verifyContract = async (address, constructorArguments) => {
@@ -120,8 +118,6 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -144,10 +140,11 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  console.log(`Transfering Vault Owner to ${beefyfinance.vaultOwner}`)
-  await vault.transferOwnership(beefyfinance.vaultOwner);
 
   await Promise.all(verifyContractsPromises);
+
+  console.log(`Transfering Vault Owner to ${OWNER}`)
+  await vault.transferOwnership(OWNER);
 
 }
 

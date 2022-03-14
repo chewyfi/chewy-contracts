@@ -144,7 +144,6 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
- // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
   console.log(`Transfering Vault Owner to ${beefyfinance.vaultOwner}`)
   await vault.transferOwnership(beefyfinance.vaultOwner);
 
