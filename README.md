@@ -63,6 +63,14 @@ npx hardhat help
 
 `Want:` 0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C
 
+#### Moonbeam BTC Supply Only
+
+`Vault:` 0xaEE11188f88AF3Dc72C7E68BDC3dF1E2B5665556
+
+`Strategy:` 0x56dc314E5Be27cA60Cb60C725fc1585F0e20Dcc9
+
+`Want:` 0x6aB6d61428fde76768D7b45D8BFeec19c6eF91A8
+
 #### Solarbeam 3pool
 
 `Vault:` 0x76fD71dDC47bfC2E8376767900bb527730915972
