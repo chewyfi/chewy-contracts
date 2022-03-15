@@ -13,7 +13,6 @@ const NATIVE = "0x98878B06940aE243284CA214f92Bb71a2b032B8A";
 const OWNER = "0x821294D7F966167722c988e4865Ea1F61b2f4dD7";
 
 const MFAM = "0xBb8d88bcD9749636BC4D2bE22aaC4Bb3B01A58F1";
-const ETH = "0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C";
 
 // mTokens
 const mNATIVE = "0x6a1A771C7826596652daDC9145fEAaE62b1cd07f";
@@ -36,7 +35,7 @@ const strategyParams = {
   borrowDepth: 4,
   minLeverage: MIN_LEVERAGE,
   outputToNativeRoute: [MFAM, NATIVE],
-  outputToWantRoute: [MFAM, ETH],
+  outputToWantRoute: [MFAM, NATIVE],
   unirouter: SOLAR_ROUTER,
   keeper: KEEPER,
   strategist: TREASURY,
