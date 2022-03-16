@@ -17,32 +17,38 @@ const OWNER = "0x821294D7F966167722c988e4865Ea1F61b2f4dD7";
 // Tokens
 const DAI = "0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844";
 const USDC = "0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d";
+const FRAX = "0x1a93b23281cc1cde4c4741353f3064709a16197d";
+const LDO = "0x6ccf12b480a99c54b23647c995f4525d544a7e72";
+const xcKSM = "0xffffffff1fcacbd218edc0eba20fc2308c778080";
 
 const shouldVerifyOnEtherscan = true;
 
-const want = "0xfb29918d393AaAa7dD118B51A8b7fCf862F5f336";
+const want = "0x493147C85Fe43F7B056087a6023dF32980Bcb2D1";
+const SWAPPER = "0x77D4b212770A7cA26ee70b1E0f27fC36da191c53";
+const poolId = 13
 
 const vaultParams = {
-  name: "Chewy SolarBeam 3pool",
-  symbol: "cwySolarbeam3pool",
+  name: "Chewy SolarBeam stKSM Pool",
+  symbol: "cwySolarbeamStKsmPool",
   delay: 21600,
 };
 
 const strategyParams = {
-  want,
-  poolId: 8,
+  want: want,
+  poolId: poolId,
   chef: SOLAR_DISTRIBUTOR,
+  swapper: SWAPPER,
   unirouter: SOLAR_ROUTER,
-  strategist: TREASURY, // some address
+  strategist: TREASURY,
   keeper: KEEPER,
   beefyFeeRecipient: TREASURY,
   outputToNativeRoute: [SOLAR, wMOVR],
- // pendingRewardsFunctionName: "pendingTri", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToSwapRoute: [SOLAR, wMOVR, xcKSM],
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefSingle",
+  strategy: "StrategySolarbeamFarm",
 };
 
 const verifyContract = async (address, constructorArguments) => {
@@ -95,7 +101,6 @@ async function main() {
   console.log("Deploying:", vaultParams.name);
 
   const predictedAddresses = await predictAddresses(deployer.address);
-  console.log(predictedAddresses.strategy);
 
   const vaultConstructorArguments = [
     predictedAddresses.strategy,
@@ -112,12 +117,14 @@ async function main() {
     strategyParams.want,
     strategyParams.poolId,
     strategyParams.chef,
+    strategyParams.swapper,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
+    strategyParams.outputToSwapRoute,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
