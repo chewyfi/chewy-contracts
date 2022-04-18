@@ -42,6 +42,7 @@ const strategyParams = {
   markets: [mBTC],
   outputToNativeRoute: [MFAM, wMOVR],
   outputToWantRoute: [MFAM, wMOVR, BTC],
+  nativeToWantRoute: [wMOVR, BTC],
   unirouter: SOLAR_ROUTER,
   keeper: KEEPER,
   strategist: TREASURY,
@@ -50,7 +51,7 @@ const strategyParams = {
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyScreamSupplyOnly",
+  strategy: "StrategyMoonwellSupplyOnly",
 };
 
 const verifyContract = async (address, constructorArguments) => {
@@ -118,6 +119,7 @@ async function main() {
   const strategyConstructorArguments = [
     strategyParams.outputToNativeRoute,
     strategyParams.outputToWantRoute,
+    strategyParams.nativeToWantRoute,
     strategyParams.markets,
     vault.address,
     strategyParams.unirouter,

@@ -44,7 +44,7 @@ const strategyParams = {
 
 const contractNames = {
   vault: "BeefyVaultV6Native",
-  strategy: "StrategyScreamNative",
+  strategy: "StrategyMoonwellNative",
 };
 
 const verifyContract = async (address, constructorArguments) => {

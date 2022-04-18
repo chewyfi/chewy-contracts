@@ -32,19 +32,20 @@ const mETH = "0x6503D905338e2ebB550c9eC39Ced525b612E77aE";
 const shouldVerifyOnEtherscan = true;
 
 const vaultParams = {
-  name: "Chewy Moonwell MOVR",
-  symbol: "cwyMoonwellMOVR",
+  name: "Chewy Moonwell FRAX",
+  symbol: "cwyMoonwellFRAX",
   delay: 21600,
 };
 
 const strategyParams = {
-  markets: [mMOVR],
+  markets: [mFRAX],
   borrowRate: 55,
   borrowRateMax: 60,
   borrowDepth: 4,
   minLeverage: 1000000000000,
-  outputToNativeRoute: [MFAM, wMOVR],
-  outputToWantRoute: [MFAM, wMOVR],
+  outputToNativeRoute: [MFAM, FRAX],
+  outputToWantRoute: [MFAM, wMOVR, FRAX],
+  nativeToWantRoute: [wMOVR, FRAX],
   unirouter: SOLAR_ROUTER,
   keeper: KEEPER,
   strategist: TREASURY,
@@ -53,7 +54,7 @@ const strategyParams = {
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyScream",
+  strategy: "StrategyMoonwell",
 };
 
 const verifyContract = async (address, constructorArguments) => {
@@ -125,6 +126,7 @@ async function main() {
     strategyParams.minLeverage,
     strategyParams.outputToNativeRoute,
     strategyParams.outputToWantRoute,
+    strategyParams.nativeToWantRoute,
     strategyParams.markets,
     vault.address,
     strategyParams.unirouter,

@@ -11,13 +11,14 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "../../interfaces/common/IUniswapRouter.sol";
 import "../../interfaces/common/IComptroller.sol";
-import "../../interfaces/common/IVToken.sol";
+import "../../interfaces/common/IVTokenNative.sol";
 import "../common/StratManager.sol";
 import "../common/FeeManager.sol";
+import { IWrappedNative } from "../../interfaces/common/IWrappedNative.sol";
 
 
 //Lending Strategy 
-contract StrategyScreamNative is StratManager, FeeManager {
+contract StrategyMoonwellNative is StratManager, FeeManager {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -112,19 +113,24 @@ contract StrategyScreamNative is StratManager, FeeManager {
         
     }
 
+    // To receive ETH
+    fallback() external payable {}
+    receive() external payable {}
+
     /**
      * @dev Repeatedly supplies and borrows {want} following the configured {borrowRate} and {borrowDepth}
      * @param _amount amount of {want} to leverage
      */
     function _leverage(uint256 _amount) internal {
         if (_amount < minLeverage) { return; }
+        IWrappedNative(native).withdraw(_amount);
 
         for (uint i = 0; i < borrowDepth; i++) {
-            IVToken(iToken).mint(_amount);
+            IVTokenNative(iToken).mint{value: _amount}();
             _amount = _amount.mul(borrowRate).div(100);
-            IVToken(iToken).borrow(_amount);
+            IVTokenNative(iToken).borrow(_amount);
         }
-
+        IWrappedNative(native).deposit{value: _amount}();
         reserves = reserves.add(_amount);
         
         updateBalance();
@@ -138,23 +144,26 @@ contract StrategyScreamNative is StratManager, FeeManager {
      */
     function _deleverage() internal {
         uint256 wantBal = IERC20(want).balanceOf(address(this));
-        uint256 borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
+        IWrappedNative(native).withdraw(wantBal);
+        uint256 borrowBal = IVTokenNative(iToken).borrowBalanceCurrent(address(this));
 
         while (wantBal < borrowBal) {
-            IVToken(iToken).repayBorrow(wantBal);
+            IVTokenNative(iToken).repayBorrow{value: wantBal}();
 
-            borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
+            borrowBal = IVTokenNative(iToken).borrowBalanceCurrent(address(this));
             uint256 targetSupply = borrowBal.mul(100).div(borrowRate);
         
-            uint256 supplyBal = IVToken(iToken).balanceOfUnderlying(address(this));
-            IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
-            wantBal = IERC20(want).balanceOf(address(this));
-        }
+            uint256 supplyBal = IVTokenNative(iToken).balanceOfUnderlying(address(this));
+            IVTokenNative(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
 
-        IVToken(iToken).repayBorrow(uint256(-1));
+            wantBal = address(this).balance;
+        }
         
         uint256 iTokenBal = IERC20(iToken).balanceOf(address(this));
-        IVToken(iToken).redeem(iTokenBal);
+        IVTokenNative(iToken).redeem(iTokenBal);
+
+        wantBal = address(this).balance;
+        IWrappedNative(native).deposit{value: wantBal}();
 
         reserves = 0;
         
@@ -172,15 +181,17 @@ contract StrategyScreamNative is StratManager, FeeManager {
         require(_borrowRate <= borrowRateMax, "!safe");
 
         uint256 wantBal = IERC20(want).balanceOf(address(this));
-        IVToken(iToken).repayBorrow(wantBal);
+        IWrappedNative(native).withdraw(wantBal);
+        IVTokenNative(iToken).repayBorrow{value: wantBal}();
 
-        uint256 borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
+        uint256 borrowBal = IVTokenNative(iToken).borrowBalanceCurrent(address(this));
         uint256 targetSupply = borrowBal.mul(100).div(_borrowRate);
         
-        uint256 supplyBal = IVToken(iToken).balanceOfUnderlying(address(this));
-        IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
+        uint256 supplyBal = IVTokenNative(iToken).balanceOfUnderlying(address(this));
+        IVTokenNative(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
         
-        wantBal = IERC20(want).balanceOf(address(this));
+        wantBal = address(this).balance;
+        IWrappedNative(native).deposit{value: wantBal}();
         reserves = wantBal;
         
         updateBalance();
@@ -211,10 +222,16 @@ contract StrategyScreamNative is StratManager, FeeManager {
     function harvest() public whenNotPaused {
         require(tx.origin == msg.sender || msg.sender == vault, "!contract");
         if (IComptroller(comptroller).pendingComptrollerImplementation() == address(0)) {
-            IComptroller(comptroller).claimComp(address(this), markets);
-            chargeFees();
-            swapRewards();
-            deposit();
+            IComptroller(comptroller).claimReward(0, address(this));
+            IComptroller(comptroller).claimReward(1, address(this));
+            uint256 outputBal = IERC20(output).balanceOf(address(this));
+            uint256 nativeBal = address(this).balance;
+            if (outputBal > 0 || nativeBal > 0) {
+                chargeFees();
+                swapRewards();
+                deposit();
+            }
+
         } else {
             panic();
         }
@@ -225,25 +242,42 @@ contract StrategyScreamNative is StratManager, FeeManager {
     // performance fees
     function chargeFees() internal {
         uint balBefore = balanceOfWant();
+
         uint256 toNative = IERC20(output).balanceOf(address(this)).mul(45).div(1000);
         IUniswapRouter(unirouter).swapExactTokensForTokens(toNative, 0, outputToNativeRoute, address(this), now);
+        
+        uint256 nativeRewardBal = address(this).balance.mul(45).div(1000);
+        if (nativeRewardBal > 0) {
+            IWrappedNative(native).deposit{value: nativeRewardBal}();
+        }
+
         uint balAfter = balanceOfWant();
         uint feeBal = balAfter.sub(balBefore);
 
         uint256 callFeeAmount = feeBal.mul(callFee).div(MAX_FEE);
-        IERC20(native).safeTransfer(tx.origin, callFeeAmount);
-
+        if (callFeeAmount > 0) {
+            IERC20(native).safeTransfer(tx.origin, callFeeAmount);
+        }
+        
         uint256 beefyFeeAmount = feeBal.mul(beefyFee).div(MAX_FEE);
-        IERC20(native).safeTransfer(beefyFeeRecipient, beefyFeeAmount);
+        if (beefyFeeAmount > 0) {
+            IERC20(native).safeTransfer(beefyFeeRecipient, beefyFeeAmount);
+        }
 
         uint256 strategistFeeAmount = feeBal.mul(strategistFee).div(MAX_FEE);
-        IERC20(native).safeTransfer(strategist, strategistFeeAmount);
+        if (strategistFeeAmount > 0) {
+            IERC20(native).safeTransfer(strategist, strategistFeeAmount);
+        }
     }
 
     // swap rewards to {want}
     function swapRewards() internal {
         uint256 outputBal = IERC20(output).balanceOf(address(this));
         IUniswapRouter(unirouter).swapExactTokensForTokens(outputBal, 0, outputToWantRoute, address(this), now);
+        uint256 nativeBal = address(this).balance;
+        if (nativeBal > 0) {
+            IWrappedNative(native).deposit{value: nativeBal}();
+        }
     }
 
     /**
@@ -295,8 +329,8 @@ contract StrategyScreamNative is StratManager, FeeManager {
     
     // return supply and borrow balance
     function updateBalance() public {
-        uint256 supplyBal = IVToken(iToken).balanceOfUnderlying(address(this));
-        uint256 borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
+        uint256 supplyBal = IVTokenNative(iToken).balanceOfUnderlying(address(this));
+        uint256 borrowBal = IVTokenNative(iToken).borrowBalanceCurrent(address(this));
         balanceOfPool = supplyBal.sub(borrowBal);
     }
 

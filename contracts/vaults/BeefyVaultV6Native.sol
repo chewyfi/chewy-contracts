@@ -32,7 +32,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
     StratCandidate public stratCandidate;
     // The strategy currently in use by the vault.
     IStrategy public strategy;
-    // BEP20 token version of BNB.
+    // BEP20 token version of Native.
     IWrappedNative public native;
     // The minimum time it has to pass before a strat candidate can be approved.
     uint256 public immutable approvalDelay;
@@ -123,7 +123,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * @dev Alternative entry point into the strat. You can send native MATIC,
      * and the vault will wrap them before sending them into the strat.
      */
-    function depositBNB() public payable {
+    function depositNative() public payable {
         strategy.beforeDeposit();
 
         uint256 _pool = balance();
@@ -161,8 +161,8 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
     /**
      * @dev Alternative helper function to withdraw all funds in native matic form.
      */
-    function withdrawAllBNB() external {
-        withdrawBNB(balanceOf(msg.sender));
+    function withdrawAllNative() external {
+        withdrawNative(balanceOf(msg.sender));
     }
 
     /**
@@ -192,7 +192,7 @@ contract BeefyVaultV6Native is ERC20, Ownable, ReentrancyGuard {
      * @dev Alternative function to exit the system. Works just like 'withdraw(uint256)',
      * but the funds arrive in native matic.
      */
-    function withdrawBNB(uint256 _shares) public {
+    function withdrawNative(uint256 _shares) public {
         uint256 r = (balance().mul(_shares)).div(totalSupply());
         _burn(msg.sender, _shares);
 
