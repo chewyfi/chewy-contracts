@@ -5,46 +5,52 @@ const keccak = require("keccak");
 const ethers = hardhat.ethers;
 
 
-const SOLAR_DISTRIBUTOR = "0x0329867a8c457e9F75e25b0685011291CD30904F"
-const SOLAR_ROUTER = "0xaa30ef758139ae4a7f798112902bf6d65612045f"
-const SOLAR = "0x6bD193Ee6D2104F14F94E2cA6efefae561A4334B";
+const ROUTER = "0x06C04B0AD236e7Ca3B3189b1d049FE80109C7977"
+const CHEF = "0xDD03CDF71a3D908F02D7676A9F0576275D7F70F2";
+const BEAST = "0x07E6158bE70e217C7db73522F01e243296b66663";
 
-const TREASURY = "0x9E7e642DEA4a7C95F70CA3B6f1d15A416097517A";
+const TREASURY = "0x9E23d450F4AFB829d3AeEFeA64fc95374658B883";
 const KEEPER = "0x821294D7F966167722c988e4865Ea1F61b2f4dD7";
-const wMOVR = "0x98878B06940aE243284CA214f92Bb71a2b032B8A";
+const wNative = "0xAeaaf0e2c81Af264101B9129C00F4440cCF0F720";
 const OWNER = "0x821294D7F966167722c988e4865Ea1F61b2f4dD7";
 
 // Tokens
-const DAI = "0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844";
-const USDC = "0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d";
+const USDC = "0x6a2d262D56735DbA19Dd70682B39F6bE9a931D98";
+const USDT = "0x3795C36e7D12A8c252A20C5a7B455f7c57b60283";
+const WETH = "0x81ECac0D6Be0550A00FF064a4f9dd2400585FE9c";
+const WBTC = "0xad543f18cFf85c77E140E3E5E3c3392f6Ba9d5CA";
 
-const shouldVerifyOnEtherscan = true;
+const shouldVerifyOnEtherscan = false;
 
-const want = "0xfb29918d393AaAa7dD118B51A8b7fCf862F5f336";
+const want = "0xC4ba558D1700b156a3511F112dFF8b86D108DEE9";
 
 const vaultParams = {
-  name: "Chewy SolarBeam 3pool",
-  symbol: "cwySolarbeam3pool",
+  name: "Chewy FunBeast wastar-usdc",
+  symbol: "cwyAstarUsdc",
   delay: 21600,
 };
 
+// CHECKLIST:
+// 1- Change routes
+// 2- Change poolId
+// 3- Change want
+// 4- Change contract names
 const strategyParams = {
   want,
-  poolId: 8,
-  chef: SOLAR_DISTRIBUTOR,
-  unirouter: SOLAR_ROUTER,
+  poolId: 7,
+  chef: CHEF,
+  unirouter: ROUTER,
   strategist: TREASURY, // some address
   keeper: KEEPER,
   beefyFeeRecipient: TREASURY,
-  outputToNativeRoute: [SOLAR, wMOVR],
-  outputToLp0Route: [SOLAR, DAI],
-  outputToLp1Route: [SOLAR, USDC],
- // pendingRewardsFunctionName: "pendingTri", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [BEAST, wNative],
+  outputToLp0Route: [BEAST, wNative, USDC],
+  outputToLp1Route: [BEAST, wNative],
 };
 
 const contractNames = {
-  vault: "BeefyVaultV6",
-  strategy: "StrategySolarbeamV2",
+  vault: "ChewyVault",
+  strategy: "StrategyBeastFarm",
 };
 
 const verifyContract = async (address, constructorArguments) => {
@@ -144,8 +150,6 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  console.log(`Transfering Vault Owner to ${beefyfinance.vaultOwner}`)
-  await vault.transferOwnership(beefyfinance.vaultOwner);
 
   await Promise.all(verifyContractsPromises);
 

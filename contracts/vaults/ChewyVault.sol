@@ -15,7 +15,7 @@ import "../interfaces/beefy/IStrategy.sol";
  * This is the contract that receives funds and that users interface with.
  * The yield optimizing strategy itself is implemented in a separate 'Strategy.sol' contract.
  */
-contract BeefyVaultV6 is ERC20, Ownable, ReentrancyGuard {
+contract ChewyVault is ERC20, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -91,15 +91,15 @@ contract BeefyVaultV6 is ERC20, Ownable, ReentrancyGuard {
     /**
      * @dev A helper function to call deposit() with all the sender's funds.
      */
-    function depositAll() external {
-        deposit(want().balanceOf(msg.sender));
+    function chewAllIn() external {
+        chewIn(want().balanceOf(msg.sender));
     }
 
     /**
      * @dev The entrypoint of funds into the system. People deposit with this function
      * into the vault. The vault is then in charge of sending funds into the strategy.
      */
-    function deposit(uint _amount) public nonReentrant {
+    function chewIn(uint _amount) public nonReentrant {
         strategy.beforeDeposit();
 
         uint256 _pool = balance();
@@ -129,8 +129,8 @@ contract BeefyVaultV6 is ERC20, Ownable, ReentrancyGuard {
     /**
      * @dev A helper function to call withdraw() with all the sender's funds.
      */
-    function withdrawAll() external {
-        withdraw(balanceOf(msg.sender));
+    function chewAllOut() external {
+        chewOut(balanceOf(msg.sender));
     }
 
     /**
@@ -138,7 +138,7 @@ contract BeefyVaultV6 is ERC20, Ownable, ReentrancyGuard {
      * from the strategy and pay up the token holder. A proportional number of IOU
      * tokens are burned in the process.
      */
-    function withdraw(uint256 _shares) public {
+    function chewOut(uint256 _shares) public {
         uint256 r = (balance().mul(_shares)).div(totalSupply());
         _burn(msg.sender, _shares);
 

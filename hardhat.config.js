@@ -99,6 +99,12 @@ module.exports = {
         process.env.DEV_3_PRIVATE_KEY !== undefined ? [process.env.DEV_3_PRIVATE_KEY] : [],
       gas: 80000000000,
     },
+    astar: {
+      url: "https://astar-api.bwarelabs.com/c7724063-cf96-46df-81ca-4bb265cafdf5",
+      accounts:
+        process.env.DEV_3_PRIVATE_KEY !== undefined ? [process.env.DEV_3_PRIVATE_KEY] : [],
+      gas: 80000000000,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

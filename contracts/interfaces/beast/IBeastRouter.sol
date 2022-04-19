@@ -2,7 +2,7 @@
 
 pragma solidity >=0.6.0 <0.9.0;
 
-interface IUniswapRouterETH {
+interface IBeastRouter {
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -59,5 +59,5 @@ interface IUniswapRouterETH {
         external
         returns (uint[] memory amounts);
 
-    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+    function getAmountsOut(uint amountIn, address[] calldata path, uint fee) external view returns (uint[] memory amounts);
 }
